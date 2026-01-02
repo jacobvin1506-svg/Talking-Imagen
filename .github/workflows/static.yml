@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Talking Pet Offline</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(to bottom, #a8e063, #56ab2f);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        #game-container {
+            text-align: center;
+            background: rgba(0,0,0,0.2);
+            padding: 40px;
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 500px;
+        }
+        #character {
+            width: 300px;
+            height: 300px;
+            background: no-repeat center/contain;
+            margin: 30px auto;
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        #speech-bubble {
+            background: white;
+            color: black;
+            padding: 20px;
+            border-radius: 30px;
+            margin: 20px auto;
+            max-width: 400px;
+            position: relative;
+            font-size: 24px;
+            display: none;
+        }
+        #speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            left: 50px;
+            border: 20px solid transparent;
+            border-top-color: white;
+        }
+        input[type="text"] {
+            padding: 15px;
+            font-size: 18px;
+            border-radius: 30px;
+            border: none;
+            width: 300px;
+            margin: 10px;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #FF69B4;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            margin: 10px;
+        }
+        button:hover {
+            background: #FF1493;
+        }
+        #score {
+            font-size: 30px;
+            margin: 20px;
+        }
+        #file-input {
+            margin: 20px;
+            padding: 10px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+        }
+        label {
+            cursor: pointer;
+            background: #4CAF50;
+            padding: 12px 25px;
+            border-radius: 30px;
+            display: inline-block;
+        }
+        label:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>¡Sube tu Imagen y Crea tu Talking Pet!</h1>
+        
+        <div id="file-input">
+            <label for="image-upload">📁 Elegir imagen de mi PC</label>
+            <input type="file" id="image-upload" accept="image/*" style="display:none;">
+            <p>O usa el gato por defecto si no subes nada 😺</p>
+        </div>
+
+        <h1 id="title" style="display:none;">¡Tu Talking Pet!</h1>
+        <div id="character"></div>
+        <div id="speech-bubble">¡Hola! Estoy listo para hablar 😊</div>
+        <p id="score-text">Puntos: <span id="score">0</span></p>
+        <input type="text" id="input" placeholder="Escribe algo y presiona Hablar o Enter...">
+        <button id="talk-btn" onclick="talk()">Hablar</button>
+    </div>
+
+    <script>
+        let score = 0;
+        const bubble = document.getElementById('speech-bubble');
+        const input = document.getElementById('input');
+        const scoreDisplay = document.getElementById('score');
+        const character = document.getElementById('character');
+        const title = document.getElementById('title');
+        const fileInput = document.getElementById('image-upload');
+
+        // Imagen por defecto (gato lindo en base64 - no necesita internet)
+        const defaultImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASIAAACqCAMAAAClqUjbAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAK7OAAgAAAANaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8eG1wOk1ldGEgeG1wLnR3aXN0OiR4bXBtZXRhPgogIDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+CiAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgeG1wbW06Q3JlYXRvclRvb2w9IkFkb2JlIFBob3Rvc2hvcCAyNi4wIChNYWNpbnRvc2gpIgogICAgICAgdGlmZjpPcmllbnRhdGlvbj0iMSIvPgogIDwvcmRmOlJERj4KICA8L3g6eG1wbWV0YT4KPD94cGFja2V0IGVuZD0idyI/PsO7i5IAAAAjUlEQVR42u3QAQ0AAAwCoNm/9BatBADYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAL8G1wABlOaLhAAAAABJRU5ErkJggg==";
+
+        // Cargar imagen por defecto al inicio
+        character.style.backgroundImage = `url('${defaultImage}')`;
+
+        // Cuando el usuario sube una imagen
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    character.style.backgroundImage = `url('${event.target.result}')`;
+                    title.style.display = 'block';
+                    bubble.textContent = '¡Genial! ¡Me encanta mi nuevo look! 😍';
+                    bubble.style.display = 'block';
+                    setTimeout(() => { bubble.style.display = 'none'; }, 4000);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        const responses = [
+            '¡Jajaja! Eso es gracioso 😂',
+            '¡Me encanta lo que dijiste! ❤️',
+            '¡Eres increíble! +10 puntos 🎉',
+            '¡Qué divertido! 😄',
+            '¡Repítelo otra vez! ✨',
+            '¡Totalmente de acuerdo! 👍',
+            '¡Wow! +5 puntos 🏆',
+            '¡Eres mi mejor amigo/a! 🥰'
+        ];
+
+        function talk() {
+            const text = input.value.trim();
+            if (text === '') return;
+
+            bubble.textContent = text;
+            bubble.style.display = 'block';
+
+            // Animación de hablar
+            character.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                character.style.transform = 'scale(1)';
+            }, 300);
+
+            // Respuesta aleatoria después de 2 segundos
+            setTimeout(() => {
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                bubble.textContent = randomResponse;
+
+                if (randomResponse.includes('puntos')) {
+                    if (randomResponse.includes('+10')) score += 10;
+                    else score += 5;
+                    scoreDisplay.textContent = score;
+                }
+            }, 2000);
+
+            input.value = '';
+
+            setTimeout(() => {
+                bubble.style.display = 'none';
+            }, 5000);
+        }
+
+        // Hablar con Enter
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') talk();
+        });
+
+        // Saludo inicial
+        setTimeout(() => {
+            bubble.textContent = '¡Miau! ¡Hola! Sube una imagen o habla conmigo 😺';
+            bubble.style.display = 'block';
+            setTimeout(() => { bubble.style.display = 'none'; }, 5000);
+        }, 1000);
+    </script>
+</body>
+</html>
